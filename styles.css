@@ -1,0 +1,54 @@
+.dsa-agent-preview {
+	width: min(900px, 95vw);
+}
+
+.dsa-agent-details {
+	display: grid;
+	grid-template-columns: max-content 1fr;
+	gap: 2px 12px;
+	margin: 0 0 8px;
+}
+
+.dsa-agent-details dt {
+	color: var(--text-muted);
+}
+
+.dsa-agent-details dd {
+	margin: 0;
+	word-break: break-word;
+}
+
+.dsa-agent-warnings {
+	color: var(--text-warning);
+	margin: 0 0 8px;
+}
+
+.dsa-agent-output {
+	width: 100%;
+	min-height: 45vh;
+	font-family: var(--font-monospace);
+	font-size: var(--font-smaller);
+	resize: vertical;
+}
+
+.dsa-agent-wide {
+	width: 100%;
+	min-width: 280px;
+}
+
+.dsa-agent-stacked {
+	flex-direction: column;
+	align-items: stretch;
+	gap: 6px;
+}
+
+.dsa-agent-stacked .setting-item-control {
+	width: 100%;
+}
+
+.dsa-agent-code {
+	width: 100%;
+	min-height: 10em;
+	font-family: var(--font-monospace);
+	font-size: var(--font-smaller);
+}

@@ -1,0 +1,10 @@
+{
+	"id": "dsa-vault-agent",
+	"name": "DSA Vault Agent",
+	"version": "1.0.0",
+	"minAppVersion": "1.13.2",
+	"description": "Generate study notes from your LeetCode solutions, link problems to DSA patterns, plan revisions and review Java code with AI. Every AI change is previewed before it is saved.",
+	"author": "Rohit",
+	"authorUrl": "https://github.com/Rohit-2710",
+	"isDesktopOnly": false
+}
