@@ -77,6 +77,7 @@ test('buildProblemNote stores the code verbatim with valid structure', () => {
 	assert.match(note, /^### Solution 1: Hash map, one pass \(mine, 2026-10-18\)$/m);
 	assert.match(note, /^#### Example$/m, 'AI heading in question demoted');
 	assert.match(note, /^### Brute force$/m);
+	assert.match(note, /\*\*Complexity\*\*\n\n- Time: O\(n\)\n- Space: O\(n\)/);
 	assert.match(note, /- Patterns: \[\[Hash Map\]\]/);
 	const lines = note.split('\n');
 	const h2 = lines.filter((l) => /^## /.test(l));

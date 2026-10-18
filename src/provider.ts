@@ -18,6 +18,8 @@ export interface AiResponse {
 }
 
 export interface AiProvider {
+	/** Shown in progress notices and previews, e.g. "Anthropic API". */
+	readonly label: string;
 	generate(request: AiRequest): Promise<AiResponse>;
 	testConnection(): Promise<{ ok: boolean; message: string }>;
 }
@@ -34,6 +36,8 @@ const TIMEOUT_MS = 10 * 60_000;
 const FALLBACK_MODELS = new Set(['claude-fable-5-1', 'claude-opus-5-5', 'claude-opus-5', 'claude-sonnet-5-5']);
 
 export class AnthropicProvider implements AiProvider {
+	readonly label = 'Anthropic API';
+
 	constructor(
 		private apiKey: string,
 		private model: string,

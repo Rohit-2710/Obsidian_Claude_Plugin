@@ -33,6 +33,9 @@ const context = await esbuild.context({
 		...builtinModules,
 	],
 	format: 'cjs',
+	// Compile lazy `await import('child_process')` (desktop-only code) to require(): Obsidian provides
+	// require on desktop, but a native import() of a Node module fails in its renderer.
+	supported: { 'dynamic-import': false },
 	target: 'es2021',
 	logLevel: 'info',
 	sourcemap: prod ? false : 'inline',

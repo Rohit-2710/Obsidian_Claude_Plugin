@@ -1,4 +1,6 @@
-import { MarkdownView, Notice, Plugin, TFile, getFrontMatterInfo, normalizePath, parseYaml, requestUrl } from 'obsidian';
+import { MarkdownView, Notice, Platform, Plugin, TFile, getFrontMatterInfo, normalizePath, parseYaml, requestUrl } from 'obsidian';
+import { ClaudeCodeProvider } from './claude-code';
+import { runProcess } from './process';
 import {
 	ActionKind,
 	addDays,
@@ -109,7 +111,12 @@ export default class DsaVaultAgent extends Plugin {
 	}
 
 	provider(): AiProvider {
-		const id = this.settings.apiKeySecret;
+		const s = this.settings;
+		if (s.provider === 'claude-code') {
+			if (!Platform.isDesktop) throw new Error('Claude Code is only available on desktop. Switch the AI provider to the Anthropic API in settings.');
+			return new ClaudeCodeProvider(s.claudePath.trim() || 'claude', s.claudeModel, runProcess);
+		}
+		const id = s.apiKeySecret;
 		const key = id ? this.app.secretStorage.getSecret(id) : null;
 		return new AnthropicProvider(key ?? '', this.settings.model.trim(), requestUrl);
 	}
@@ -583,11 +590,18 @@ export default class DsaVaultAgent extends Plugin {
 		if (this.busy.has(busyKey)) return fail('Already processing this.');
 		const controller = new AbortController();
 		const approxTokens = Math.ceil((prompt.system.length + prompt.user.length) / 4);
-		const notice = new Notice(`${what} (~${approxTokens} tokens) to ${this.settings.model}… `, 0);
+		let provider: AiProvider;
+		try {
+			provider = this.provider();
+		} catch (e) {
+			return fail(errMsg(e));
+		}
+		const target = provider.label === 'Claude Code' ? 'Claude Code' : this.settings.model;
+		const notice = new Notice(`${what} (~${approxTokens} tokens) to ${target}… `, 0);
 		notice.messageEl.createEl('button', { text: 'Cancel' }).onclick = () => controller.abort();
 		this.busy.add(busyKey);
 		try {
-			return await this.provider().generate({
+			return await provider.generate({
 				systemPrompt: prompt.system,
 				userPrompt: prompt.user,
 				maxOutputTokens: this.settings.maxOutputTokens,
@@ -636,7 +650,7 @@ export default class DsaVaultAgent extends Plugin {
 
 	private responseDetails(res: AiResponse): [string, string][] {
 		return [
-			['Model', `${res.model ?? this.settings.model} (Anthropic API)`],
+			['Model', this.settings.provider === 'claude-code' ? `${res.model ?? 'default'} (Claude Code, counts against your Claude plan)` : `${res.model ?? this.settings.model} (Anthropic API)`],
 			['Tokens', `${res.usage?.inputTokens ?? '?'} in / ${res.usage?.outputTokens ?? '?'} out`],
 		];
 	}

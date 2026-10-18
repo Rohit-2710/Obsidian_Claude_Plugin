@@ -1,6 +1,6 @@
 # DSA Vault Agent
 
-An Obsidian plugin for LeetCode/DSA study. It uses the Anthropic API to format problem notes, review Java solutions and fill gaps in pattern notes. It also builds a revision queue from your notes' metadata, without AI. You see every AI result before anything is written, and your notes are never overwritten without asking.
+An Obsidian plugin for LeetCode/DSA study. It uses Claude, through either your own Claude subscription (via Claude Code, on desktop) or an Anthropic API key, to format problem notes, review Java solutions and fill gaps in pattern notes. It also builds a revision queue from your notes' metadata, without AI. You see every AI result before anything is written, and your notes are never overwritten without asking.
 
 The goal is learning. An AI explanation never marks a problem as `recalled` or `mastered`. Only you set those.
 
@@ -17,7 +17,7 @@ The goal is learning. An AI explanation never marks a problem as `recalled` or `
 | **Log revision attempt** | No AI. A form for after you re-solve a problem: outcome, confidence and mistakes. It updates `status`, `confidence` and `mistake_types`, sets `next_review`, and adds a line to the note's revision log. |
 | **Generate revision queue** | Ranks `type: leetcode` notes by overdue `next_review`, low confidence, repeated `mistake_types`, not-yet-recalled status and weak patterns. Lists invalid metadata instead of crashing. No AI is used. |
 | **Process current note** | Runs the action named in frontmatter `ai_action: format | review | enrich`. Without one, pattern/topic notes are enriched and other notes are formatted. |
-| **Test AI connection** | Checks the API key and model ID through the free `/v1/models` endpoint. |
+| **Test AI connection** | API mode: checks the key and model ID through the free `/v1/models` endpoint. Claude Code mode: checks that Claude Code is installed and signed in. |
 
 Every AI command shows a preview first. The preview lists the source note, what will change, the model, token usage and any warnings, then shows the raw Markdown. It is never rendered, so nothing in it can execute. Cancel leaves your files unchanged.
 
@@ -76,32 +76,51 @@ The plugin reads these frontmatter fields. Unknown fields are preserved.
 
 The problem and pattern templates the plugin produces are in [`src/prompts.ts`](src/prompts.ts).
 
+## Choosing how to connect to Claude
+
+Pick one in **Settings → DSA Vault Agent → AI provider**:
+
+| | Claude Code (your Claude subscription) | Anthropic API (API key) |
+|---|---|---|
+| You need | A Claude plan (Pro, Max…) and [Claude Code](https://code.claude.com/docs/en/overview) installed and signed in | An Anthropic API account and key from the [Claude Console](https://platform.claude.com) |
+| Billing | Counts against your plan's usage limits; no extra cost | Pay per request |
+| Devices | Desktop only (Windows, macOS, Linux) | Desktop, tablets and phones |
+| Cancel | Stops the request immediately | Stops waiting; the request still completes and is billed |
+
+**Setting up Claude Code mode:**
+1. Install Claude Code and run `claude` once in a terminal to sign in with your Claude account.
+2. In the plugin settings, set **AI provider** to *Claude Code*.
+3. Click **Test connection**. If it says Claude Code wasn't found, run `which claude` (macOS/Linux) or `where claude` (Windows) in a terminal and paste the full path into **Claude Code path**. On Windows, use Claude Code's native installer: `.cmd` shims from npm can't be started without a shell.
+4. Optionally set **Claude Code model** (e.g. `sonnet` or `opus`). Leave it empty to use Claude Code's default.
+
+The plugin runs your own installed, unmodified Claude Code with fixed options: `claude -p --safe-mode --tools "" --system-prompt … --output-format json --no-session-persistence`. Your note is sent on standard input, never as a command-line argument. `--safe-mode` keeps your Claude Code customizations (CLAUDE.md, plugins, hooks, MCP servers, output styles) out of these requests, and `--tools ""` means Claude can't read files, edit files or run commands. It only returns text, which the plugin checks and previews as usual. The plugin never reads or stores your Claude login.
+
 ## Disclosures
 
-- **Network use.** The AI commands send requests to the Anthropic API (`api.anthropic.com`), which generates the notes, reviews and suggestions. A request is made only when you run an AI command (or click **Test connection**). It contains the active note, any selected text, and, if **Include related notes** is on, the names and frontmatter of up to *N* related notes (never their contents). For **New LeetCode solution** it also contains the code and problem statement you paste. Your vault is never uploaded in bulk. **Log revision attempt** and **Generate revision queue** make no network requests.
-- **Account and payment.** The AI commands need an Anthropic API account and API key, which is a paid, usage-billed service from Anthropic, separate from a Claude.ai or Claude Code subscription. The non-AI commands work without one.
+- **Network use.** The AI commands send a request to Anthropic, either to the Anthropic API (`api.anthropic.com`) or through Claude Code, which contacts Anthropic using your Claude account. A request is made only when you run an AI command (or click **Test connection**). It contains the active note, any selected text, and, if **Include related notes** is on, the names and frontmatter of up to *N* related notes (never their contents). For **New LeetCode solution** it also contains the code and problem statement you paste. Your vault is never uploaded in bulk. **Log revision attempt** and **Generate revision queue** make no network requests.
+- **Account and payment.** The AI commands need either a Claude subscription with Claude Code installed (desktop only), or an Anthropic API account and key, which is a paid, usage-billed service separate from a Claude subscription. The non-AI commands work without either.
+- **Running a program outside the vault.** In Claude Code mode only, the plugin starts the Claude Code program installed on your computer (desktop only), with the options listed above. This is how it uses your Claude subscription. It doesn't run any other program.
 - **No telemetry, no ads.** The plugin collects no analytics and contacts no service other than Anthropic.
 - **Files.** The plugin reads and writes only inside your vault.
 
 ## Privacy and cost
 
-- **API key storage.** The key is stored in Obsidian's keychain (`SecretStorage`), not in this plugin's `data.json` (which lives in your vault and travels with vault sync). The plugin stores only the secret's name. You can delete the secret from Obsidian's keychain settings. For how secrets are protected on your platform, see Obsidian's documentation; this plugin adds no encryption of its own. The key never appears in error messages.
-- **Cost control.** You choose the model and the output-token limit. The default model is `claude-opus-5-5`. For lower cost, use `claude-sonnet-5-5` or `claude-haiku-5-5`. Each request's progress notice shows an estimated input size.
-- **Cancelling.** Obsidian's `requestUrl` can't abort a request in flight. Cancelling stops waiting and discards the result, but the request still completes on Anthropic's side and is billed.
+- **API key storage (API mode).** The key is stored in Obsidian's keychain (`SecretStorage`), not in this plugin's `data.json` (which lives in your vault and travels with vault sync). The plugin stores only the secret's name. You can delete the secret from Obsidian's keychain settings. For how secrets are protected on your platform, see Obsidian's documentation; this plugin adds no encryption of its own. The key never appears in error messages. Claude Code mode needs no key in the plugin at all.
+- **Cost control (API mode).** You choose the model and the output-token limit. The default model is `claude-opus-5-5`. For lower cost, use `claude-sonnet-5-5` or `claude-haiku-5-5`. Each request's progress notice shows an estimated input size.
+- **Cancelling.** In Claude Code mode, cancelling stops the Claude Code process. In API mode, Obsidian's `requestUrl` can't abort a request in flight, so cancelling stops waiting and discards the result, but the request still completes on Anthropic's side and is billed.
 
 ## Install
 
-Requires Obsidian 1.13.2 or later. Works on desktop, tablets and phones.
+Requires Obsidian 1.13.2 or later. Works on desktop, tablets and phones; Claude Code mode is desktop only.
 
 - **From Community plugins** (once it's approved): *Settings → Community plugins → Browse*, search for "DSA Vault Agent", then **Install** and **Enable**.
-- **Before approval, with BRAT:** install the *BRAT* plugin from Community plugins, run **BRAT: Add a beta plugin for testing**, and enter `https://github.com/Rohit-2710/Obsidian_Claude_Plugin`. BRAT also works on tablets and keeps the plugin updated.
+- **Before approval, with BRAT:** install the *BRAT* plugin from Community plugins, run **BRAT: Add a beta plugin for testing**, and enter `https://github.com/Rohit-2710/Obsidian_Claude_Plugin`. BRAT keeps the plugin updated.
 - **Manually:** download `main.js`, `manifest.json` and `styles.css` from the latest [release](../../releases/latest) into `<YourVault>/.obsidian/plugins/dsa-vault-agent/`, then enable **DSA Vault Agent** under *Settings → Community plugins*.
 
-Then open the plugin settings, pick or create a keychain secret holding your Anthropic API key, and click **Test connection**. If the secret isn't available on another device, such as your tablet, add it there once with the same name.
+Then open the plugin settings and set up a provider: see [Choosing how to connect to Claude](#choosing-how-to-connect-to-claude).
 
 ## Not included (yet)
 
-- Claude Code CLI adapter
 - Automatic folder watcher (use **Process current note**)
 - Batch linking of all untagged problems
 - Hint ladder
@@ -124,7 +143,8 @@ npm test           # unit tests (Node's built-in test runner)
   - `src/core.ts` holds pure logic: paths, validation, link checks, section editing and revision scoring.
   - `src/solution.ts` builds "New LeetCode solution" notes and checks the AI's JSON.
   - `src/prompts.ts` holds the versioned prompts and JSON schemas.
-  - `src/provider.ts` is the Anthropic client. It has no runtime dependency on Obsidian.
+  - `src/provider.ts` is the Anthropic API client, and `src/claude-code.ts` the Claude Code client. Neither depends on Obsidian at runtime.
+  - `src/process.ts` starts Claude Code (desktop only, behind a `Platform.isDesktop` check).
   - `src/ui.ts` contains the preview, form and confirmation modals.
   - `src/settings.ts` contains the settings and the settings tab.
   - `src/main.ts` contains the commands and the file operations.

@@ -153,6 +153,8 @@ export function nextSolutionNumber(md: string): number {
 	return extractCodeBlocks(md).length ? 2 : 1;
 }
 
+const complexity = (time: string, space: string) => ['**Complexity**', '', `- Time: ${time || '[verify]'}`, `- Space: ${space || '[verify]'}`];
+
 export interface BlockInput {
 	n: number;
 	method: string;
@@ -178,7 +180,7 @@ export function solutionBlock(o: BlockInput): string {
 		'',
 		demoteHeadings(o.howItWorks),
 		'',
-		`**Complexity:** time ${o.time || '[verify]'}; space ${o.space || '[verify]'}.`,
+		...complexity(o.time, o.space),
 	];
 	if (o.compared) lines.push('', '**Compared with earlier solutions**', '', demoteHeadings(o.compared));
 	return lines.join('\n');
@@ -224,7 +226,7 @@ export function buildProblemNote({ data, link, input, date, model, promptVersion
 				'',
 				demoteHeadings(a.intuition),
 				'',
-				`**Complexity:** time ${a.time || '[verify]'}; space ${a.space || '[verify]'}.`,
+				...complexity(a.time, a.space),
 				'',
 			])
 		: ['None suggested.', ''];
